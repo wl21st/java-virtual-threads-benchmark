@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="BenchmarkJava21Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+    <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UnknownPolicyInFreeMode" />
+    <module name="java21.main" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.meutudo.benchmarkjava21.BenchmarkJava21Application" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="com.meutudo.benchmarkjava21.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
