@@ -26,7 +26,7 @@ Virtual threads (stable since Java 21) are JVM-managed and cost ~1KB each. When 
 ## Architecture
 
 ```
-k6 (ramp-up: 10 → 200 VUs)
+k6 (independent scenarios: 0 → 200 VUs per Java version)
    │
    ├──→ java17:8081  (platform threads — Executors.newFixedThreadPool)
    ├──→ java21:8082  (virtual threads  — Executors.newVirtualThreadPerTaskExecutor)
@@ -41,11 +41,13 @@ All three apps are identical Spring Boot applications — same endpoint, same lo
 
 Each request to `/benchmark/concurrent?tasks=50&delay=100` spawns 50 concurrent tasks that each sleep 100ms (simulating blocking I/O — database queries, external HTTP calls, file reads). The endpoint waits for all tasks to complete via `CompletableFuture.allOf()`.
 
+The current k6 script runs each Java version in its own scenario: 15s ramp from 0 to 200 VUs, 2m at 200 VUs, then 15s ramp down to zero. The three scenarios run concurrently by default, with up to 600 VUs in total. Each scenario reports its own request count, failure rate, and latency statistics under `r17`, `r21`, or `r25`.
+
 At 200 VUs this means up to **10,000 concurrent blocking tasks** per second — exactly the scenario where platform threads collapse and virtual threads shine.
 
 ## Results
 
-**k6 Load Profile:** 30s warm-up → 2m ramp to 200 VUs → 3m plateau → 1m ramp-down
+**Load profile used for the recorded results:** 30s warm-up → 2m ramp to 200 VUs → 3m plateau → 1m ramp-down. These results predate the current independent scenarios.
 
 | Metric | Java 17 | Java 21 | Java 25 |
 |---|---|---|---|
@@ -94,7 +96,7 @@ git clone <repo-url>
 cd java-performance-versions
 docker compose up --build
 
-# In a separate terminal, run the load test (~6m30s)
+# In a separate terminal, run the load test (2m30s, plus up to 15s grace)
 docker run --rm -i \
   --network java-performance-versions_benchmark-net \
   grafana/k6 run - < k6/ramp-up.js
@@ -102,6 +104,17 @@ docker run --rm -i \
 # Open Grafana dashboard
 xdg-open http://localhost:3000  # login: admin / admin
 ```
+
+With the apps exposed on localhost, run all versions or select a single version:
+
+```bash
+k6 run k6/ramp-up.js                       # all three independent scenarios
+k6 run -e JAVA_VERSION=17 k6/ramp-up.js    # Java 17 only
+k6 run -e JAVA_VERSION=21 k6/ramp-up.js    # Java 21 only
+k6 run -e JAVA_VERSION=25 k6/ramp-up.js    # Java 25 only
+```
+
+`JAVA_VERSION` accepts `all` (the default), `17`, `21`, or `25`. For comparisons on shared hardware, run one version at a time so the benchmark workloads do not compete for CPU and memory. The 15s grace settings let in-progress iterations finish; they are separate from the ramp stages.
 
 ## Grafana Dashboard
 
